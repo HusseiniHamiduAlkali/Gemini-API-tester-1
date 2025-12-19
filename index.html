@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini API Tester</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --chat-bg: #ffffff;
+            --primary-color: #4A90E2;
+            --user-msg: #e1ffc7;
+            --ai-msg: #f1f0f0;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            height: 80vh;
+            background: var(--chat-bg);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .config-area {
+            padding: 10px 20px;
+            background: #eee;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #apiKey {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #chatbox {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .user { align-self: flex-end; background-color: var(--user-msg); }
+        .ai { align-self: flex-start; background-color: var(--ai-msg); }
+        .error { align-self: center; background-color: #ffcccc; color: #cc0000; }
+
+        .input-area {
+            display: flex;
+            padding: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        #sendBtn {
+            margin-left: 10px;
+            padding: 10px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #sendBtn:hover { background: #357ABD; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">Gemini API Connectivity Test</div>
+    
+    <div class="config-area">
+        <input type="password" id="apiKey" placeholder="Paste your Gemini API Key here...">
+    </div>
+
+    <div id="chatbox">
+        <div class="message ai">Enter your key above and send a message to test connectivity.</div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="Type a message...">
+        <button id="sendBtn">Send</button>
+    </div>
+</div>
+
+<script>
+    const chatbox = document.getElementById('chatbox');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const apiKeyInput = document.getElementById('apiKey');
+
+    function appendMessage(role, text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+        msgDiv.innerText = text;
+        chatbox.appendChild(msgDiv);
+        chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    async function callGemini() {
+        const text = userInput.value.trim();
+        const apiKey = apiKeyInput.value.trim();
+
+        if (!text) return;
+        if (!apiKey) {
+            appendMessage('error', 'Error: Please enter an API key first.');
+            return;
+        }
+
+        appendMessage('user', text);
+        userInput.value = '';
+
+        // API Endpoint for Gemini 1.5 Flash (Standard for testing)
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: text }] }]
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                appendMessage('error', `API Error: ${data.error.message}`);
+            } else {
+                const aiResponse = data.candidates[0].content.parts[0].text;
+                appendMessage('ai', aiResponse);
+            }
+        } catch (err) {
+            appendMessage('error', 'Network Error: Check console or API key.');
+            console.error(err);
+        }
+    }
+
+    sendBtn.addEventListener('click', callGemini);
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') callGemini();
+    });
+</script>
+
+</body>
+</html>
